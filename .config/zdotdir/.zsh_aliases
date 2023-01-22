@@ -1,0 +1,53 @@
+# undesired aliases
+unalias which-command
+
+
+# Typing errors...
+alias cd..='cd ..'
+
+
+# Play safe!
+alias 'rm=rm -i'
+alias 'mv=mv -i'
+alias 'cp=cp -i'
+
+
+# shortcuts
+alias ls='ls --color'	# linux
+# alias ls='ls -G'		# mac
+alias l='ls -laF'
+alias c='clear'
+
+
+# utilities
+alias myip='curl -s https://api.ipify.org; echo'
+alias qr='qrencode -t UTF8'
+
+#
+# functions
+#
+
+function build-php-docker() {
+	# https://github.com/mlocati/docker-php-extension-installer
+	#
+	docker build -t myphp:$1 -  << __FIM__
+FROM php:$1-apache
+
+ADD https://raw.githubusercontent.com/mlocati/docker-php-extension-installer/master/install-php-extensions /usr/local/bin/
+
+RUN chmod uga+x /usr/local/bin/install-php-extensions && sync && install-php-extensions ${@:2} && \
+	usermod  -u $(id -u) www-data &&  groupmod -g $(id -g) www-data && a2enmod rewrite && install-php-extensions pgsql
+__FIM__
+}
+
+
+function run-php-docker() {
+	docker run --rm -v "$PWD":/var/www/html --network=postgres-network  myphp:"$1"
+}
+
+
+function termtitle() {
+	echo -ne "\033]0;$*\007"
+}
+
+
