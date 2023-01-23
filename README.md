@@ -6,9 +6,10 @@
 **dotfiles**
 
 ```shell
-git init --bare $HOME/.config/dotfiles
+git clone --bare https://github.com/rdemetrescu/dotfiles.git $HOME/.config/dotfiles
 alias config='git --git-dir=$HOME/.config/dotfiles --work-tree=$HOME'
 config config --local status.showUntrackedFiles no
+config reset --hard HEAD
 ```
 
 ## Resources
