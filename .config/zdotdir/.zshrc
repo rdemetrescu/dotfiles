@@ -5,28 +5,14 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-alias config='git --git-dir=$HOME/.config/dotfiles --work-tree=$HOME'
 
-### Added by Zinit's installer --------------------------------------------------------------------
-if [[ ! -f $HOME/.zi/bin/zi.zsh ]]; then
-  print -P "%F{33}▓▒░ %F{160}Installing (%F{33}z-shell/zi%F{160})…%f"
-  command mkdir -p "$HOME/.zi" && command chmod go-rwX "$HOME/.zi"
-  command git clone -q --depth=1 --branch "main" https://github.com/z-shell/zi "$HOME/.zi/bin" && \
-    print -P "%F{33}▓▒░ %F{34}Installation successful.%f%b" || \
-    print -P "%F{160}▓▒░ The clone has failed.%f%b"
-fi
+# zinit setup
+# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#manual
+ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+[ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)"
+[ ! -d $ZINIT_HOME/.git ] && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+source "${ZINIT_HOME}/zinit.zsh"
 
-source "$HOME/.zi/bin/zi.zsh"
-autoload -Uz _zi
-(( ${+_comps} )) && _comps[zi]=_zi
-
-# examples here -> https://wiki.zshell.dev/ecosystem/category/-annexes
-zicompinit # <- https://wiki.zshell.dev/docs/guides/commands
-zi light-mode for \
-  z-shell/z-a-meta-plugins \
-  @annexes # <- https://wiki.zshell.dev/ecosystem/category/-annexes
-# examples here -> https://wiki.zshell.dev/community/gallery/collection
-zicompinit # <- https://wiki.zshell.dev/docs/guides/commands
 
 
 #
@@ -53,22 +39,36 @@ zinit light sharkdp/bat
 zinit ice as"program" from"gh-r" mv"fd* -> fd" pick"fd/fd"
 zinit light sharkdp/fd
 
-
 # xz
-# zinit ice as"command" from"gh-r" mv"xz* -> xz" pick"xz/xz"
-# zinit light xz-mirror/xz
+zinit ice as"command" from"gh-r" mv"xz* -> xz" pick"xz/xz"
+zinit light tukaani-project/xz
 
 # helix
-# zinit ice as"command" from"gh-r" mv"*-x86_64-linux/hx -> hx" bpick"*-x86_64-linux.tar.xz" pick"hx"
-# zinit light helix-editor/helix
+zinit ice as"command" from"gh-r" mv"*-x86_64-linux/hx -> hx" bpick"*-x86_64-linux.tar.xz" pick"hx"
+zinit light helix-editor/helix
+
+
+
 
 #
+# zsh plugins
+#
+
+
+
+
+
 # Aloxaf-fzf-tab
 # https://wiki.zshell.dev/community/gallery/collection/completions#comp-aloxaf-fzf-tab
 #
 # NOTE: fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets,
 # such as zsh-autosuggestions or fast-syntax-highlighting!!
 zinit light Aloxaf/fzf-tab
+
+
+
+
+
 
 #
 # https://wiki.zshell.dev/community/gallery/collection/completions#comp-docker-cli
@@ -83,6 +83,7 @@ zi snippet https://github.com/docker/cli/blob/master/contrib/completion/zsh/_doc
 # - autosuggestions
 # - completions
 #
+
 zinit wait lucid light-mode for \
  atinit"zicompinit; zicdreplay" \
      zdharma/fast-syntax-highlighting \
@@ -93,25 +94,29 @@ zinit wait lucid light-mode for \
 
 
 
+
+
+
 #
-# https://z.digitalclouds.dev/docs/gallery/collection/themes#thp-romkatvpowerlevel10k
+# powerlevel10k
 #
-zi ice depth=1; zi light romkatv/powerlevel10k
-
-# To customize prompt, run `p10k configure` or edit ~/.config/zdotdir/.p10k.zsh.
-[[ ! -f ~/.config/zdotdir/.p10k.zsh ]] || source ~/.config/zdotdir/.p10k.zsh
-
-
+zinit ice depth"1"; zinit light romkatv/powerlevel10k
 
 
 ### History configuration -------------------------------------------------------------------------
-setopt HIST_IGNORE_ALL_DUPS
-setopt HIST_IGNORE_SPACE
-setopt SHARE_HISTORY
 
 HISTSIZE=1000
-SAVEHIST=1000
+SAVEHIST=$HISTSIZE
 HISTFILE=$ZDOTDIR/.zsh_history
+HISTDUP=erase
+
+setopt append_history
+setopt share_history
+setopt hist_ignore_space
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_ignore_dups
+setopt hist_find_no_dups
 
 
 ### Configurações diversas através do "setopt" ----------------------------------------------------
@@ -122,14 +127,22 @@ HISTFILE=$ZDOTDIR/.zsh_history
 
 # Prompts for confirmation after 'rm *' etc
 # Helps avoid mistakes like 'rm * o' when 'rm *.o' was intended
-setopt RM_STAR_WAIT
+setopt rm_star_wait
 
 # Background processes aren't killed on exit of shell
-setopt AUTO_CONTINUE
+setopt auto_continue
 
 # Don’t write over existing files with >, use >! instead
-setopt NOCLOBBER
+setopt noclobber
 
+
+
+# Completion styling
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' menu no
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 
 
 ### bindkeys  -------------------------------------------------------------------------------------
@@ -137,11 +150,16 @@ bindkey -v                        # Use vi keybindings
 bindkey "^[[1;5C" forward-word    # ctrl right
 bindkey "^[[1;5D" backward-word   # ctrl left
 
-bindkey '^R' history-incremental-search-backward	# necessary when using "bindkey -v"
+bindkey '^p' history-search-backward
+bindkey '^n' history-search-forward
 
-
+zinit light zdharma-continuum/history-search-multi-word
 
 
 ### aliases ---------------------------------------------------------------------------------------
 [ -f $ZDOTDIR/.zsh_aliases ] && source "$ZDOTDIR/.zsh_aliases"
 [ -f $ZDOTDIR/.zsh_extra_aliases ] && source "$ZDOTDIR/.zsh_extra_aliases"
+
+
+# To customize prompt, run `p10k configure` or edit ~/.config/zdotdir/.p10k.zsh.
+[[ ! -f ~/.config/zdotdir/.p10k.zsh ]] || source ~/.config/zdotdir/.p10k.zsh
